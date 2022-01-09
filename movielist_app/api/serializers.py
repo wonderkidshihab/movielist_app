@@ -1,8 +1,14 @@
 from rest_framework import serializers
-from movielist_app.models import Movie
+from movielist_app.models import Content, Platform
 
 
-class MovieSerializer(serializers.ModelSerializer):
+class ContentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Movie
-        fields = ('id', 'name', 'description')
+        model = Content
+        fields = ('__all__')
+
+
+class PlatformSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Platform
+        fields = ('__all__')
