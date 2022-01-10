@@ -1,94 +1,61 @@
 from movielist_app import models
-from movielist_app.api.serializers import ContentSerializer, PlatformSerializer
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from movielist_app.api.serializers import ContentSerializer, PlatformSerializer, ReviewSerializer
+# from rest_framework.response import Response
+# from rest_framework.views import APIView
+from rest_framework import generics
+from rest_framework.exceptions import ValidationError
 
 
-class ContentListView(APIView):
-    def get(self, request):
-        contents = models.Content.objects.all()
-        serializer = ContentSerializer(contents, many=True)
-        return Response(serializer.data, status=200)
+class ContentListView(generics.ListAPIView):
+    queryset = models.Content.objects.all()
+    serializer_class = ContentSerializer
 
-    def post(self, request):
-        serializers = ContentSerializer(data=request.data)
-        if serializers.is_valid():
-            serializers.save()
-            return Response(serializers.data, status=201)
+
+class ContentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Content.objects.all()
+    serializer_class = ContentSerializer
+
+
+class PlatformListView(generics.ListAPIView):
+    queryset = models.Platform.objects.all()
+    serializer_class = PlatformSerializer
+
+
+class PlatformDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Platform.objects.all()
+    serializer_class = PlatformSerializer
+
+
+class ReviewListView(generics.ListAPIView):
+    queryset = models.Review.objects.all()
+    serializer_class = ReviewSerializer
+
+
+class ReviewDetailsView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = models.Review.objects.all()
+    serializer_class = ReviewSerializer
+
+
+class ReviewCreateView(generics.CreateAPIView):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        return models.Review.objects.all()
+
+    def perform_create(self, serializer):
+        pk = self.kwargs['pk']
+        reviewer = self.request.user
+        content = models.Content.objects.get(pk=pk)
+        review_queryset = models.Review.objects.filter(
+            content=content, reviewer=reviewer)
+        if review_queryset.exists():
+            raise ValidationError("You have already reviewed this content")
         else:
-            return Response(serializers.errors, status=400)
+            serializer.save(content=content, reviewer=reviewer)
 
 
-class ContentDetailView(APIView):
-    def get(self, request, content_id):
-        try:
-            Content = models.Content.objects.get(id=content_id)
-        except Exception as e:
-            return Response(status=404)
-        serializer = ContentSerializer(Content)
-        return Response(serializer.data, status=200)
+class ReviewListForContentView(generics.ListAPIView):
+    serializer_class = ReviewSerializer
 
-    def put(self, request, Content_id):
-        try:
-            Content = models.Content.objects.get(id=Content_id)
-        except Exception as e:
-            return Response(status=404)
-        serializer = ContentSerializer(Content, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        else:
-            return Response(serializer.errors, status=400)
-
-    def delete(self, request, content_id):
-        try:
-            Content = models.Content.objects.get(id=content_id)
-        except Exception as e:
-            return Response(status=404)
-        Content.delete()
-        return Response(status=204)
-
-
-class PlatformListView(APIView):
-    def get(self, request):
-        platforms = models.Platform.objects.all()
-        serializer = PlatformSerializer(platforms, many=True)
-        return Response(serializer.data, status=200)
-
-    def post(self, request):
-        serializers = PlatformSerializer(data=request.data)
-        if serializers.is_valid():
-            serializers.save()
-            return Response(serializers.data, status=201)
-        else:
-            return Response(serializers.errors, status=400)
-
-
-class PlatformDetailView(APIView):
-    def get(self, request, platform_id):
-        try:
-            platform = models.Platform.objects.get(id=platform_id)
-        except Exception as e:
-            return Response(status=404)
-        serializer = PlatformSerializer(platform)
-        return Response(serializer.data, status=200)
-
-    def put(self, request, platform_id):
-        try:
-            platform = models.Platform.objects.get(id=platform_id)
-        except Exception as e:
-            return Response(status=404)
-        serializer = PlatformSerializer(platform, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        else:
-            return Response(serializer.errors, status=400)
-
-    def delete(self, request, platform_id):
-        try:
-            platform = models.Platform.objects.get(id=platform_id)
-        except Exception as e:
-            return Response(status=404)
-        platform.delete()
-        return Response(status=204)
+    def get_queryset(self):
+        return models.Review.objects.filter(content=self.kwargs['pk'])
